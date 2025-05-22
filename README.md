@@ -27,12 +27,12 @@ cp ./target/release/remove_water ~/.vim/bin/
 4.  Vim Integration
 Add the following to your ~/.vimrc to run the filter automatically on every file save:
 
-" Run non-ASCII character filter on file save
+** Run non-ASCII character filter on file save **
 augroup RunRemoveWaterOnSave
     autocmd!
     autocmd BufWritePost * silent! execute '!~/.vim/bin/remove_water ' . shellescape(@%, 1)
 augroup END
-
+```
  Example
 When saving any file, remove_water will:
 
