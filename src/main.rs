@@ -24,6 +24,7 @@
 use std::fs::{read, write};
 use std::env;
 use sha256::digest;
+use entropy::shannon_entropy;
 
 fn sha256_hash(bytes: &[u8]) -> String {
     let sha256_hash = digest(bytes);
@@ -79,7 +80,8 @@ fn main() -> Result <(), Box<dyn std::error::Error>> {
             write(argv[1].clone(), &filtered_bytes)?;
         }
 
-        println!("original sha256: {}\ndestination sha256: {}", original_sha256, filtered_sha256);
+        println!("original sha256: {}\noriginal shannon: {}\ndestination sha256: {}\ndestination shannon: {}",
+            original_sha256, shannon_entropy(&data), filtered_sha256, shannon_entropy(&filtered_bytes));
     }
 
     Ok(())
