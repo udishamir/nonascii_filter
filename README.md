@@ -10,24 +10,33 @@ This tool scans files and removes any byte outside the standard ASCII range (`0x
 
 1. **Clone this repository**:
 ```
+
 git clone https://github.com/yourusername/nonascii_filter.git
 cd nonascii_filter
+
 ```
 
 2. Build the release binary 
-```cargo build --release```
+```
+
+cargo build --release
+
+```
 
 3. Copy the compiled executable
 
 ```
+
 mkdir -p ~/.vim/bin
 cp ./target/release/remove_water ~/.vim/bin/
+
 ```
 
 4.  Vim Integration
 An example vimrc file
 
 ```
+
 set spell
 set spelllang=en_us
 
@@ -68,6 +77,7 @@ function! HighlightNonASCIIChars()
     let g:nonascii_match_id = matchaddpos('NonASCII', l:positions, 10, 9999)
   endif
 endfunction
+
 
 ```
 
