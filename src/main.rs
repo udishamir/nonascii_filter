@@ -62,9 +62,13 @@ fn main() -> Result <(), Box<dyn std::error::Error>> {
             .enumerate()
             .filter_map(|(i, &b)| {
                 if b.is_ascii() {
+                    // Doing something with b, currently nothing
                     Some(b)
                 } else {
+                    // Pushing to the end of the vector, i is the ordinal offset 
                     non_ascii_offsets.push(i);
+
+                    // filter_map expect to return value
                     None
                 }
             })
