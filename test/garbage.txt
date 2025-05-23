@@ -1,0 +1,15 @@
+// ASCII text starts here, generated with ChatGPT
+The quick brown fox jumps over the lazy dog.
+1234567890!@#$%^&*()_+-=[]{}|;:',.<>/?~`
+
+// UTF-8 text begins
+Curly quotes: “Hello”, ‘World’
+Em dash and en dash: — –
+Accents: café, naïve, résumé, coöperate
+Emoji: 😃🚀🔥💾
+CJK: 你好，世界！こんにちは世界！안녕하세요 세계!
+
+// Mixed edge cases
+Mix: normal→→utf8←←ASCII
+Quote combo: "ASCII" vs “UTF8”
+EOF marker: ␀ (U+2400) and ␡ (U+2421)

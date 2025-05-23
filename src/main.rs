@@ -41,7 +41,7 @@ fn main() -> Result <(), Box<dyn std::error::Error>> {
         std::process::exit(0);
     }
 
-    println!("\nRemoving non ASCII characters ...");
+    println!("\nScanning for non-ASCII characters ...");
 
     let fstat: bool = std::fs::exists(argv[1].clone()).expect("file not found");
     if !fstat {
@@ -54,8 +54,11 @@ fn main() -> Result <(), Box<dyn std::error::Error>> {
         // Calculating the original file sha256 before filtering
         let original_sha256 = sha256_hash(&data);
 
-        // I want to track non ASCII characters offset
+        // I want to track non ASCII bytes offset
         let mut non_ascii_offsets = Vec::new();
+
+        // Store non ASCII bytes
+        let mut non_ascii_bytes: Vec<u8> = Vec::new(); 
 
         // Filtering non ASCII characters 
         let filtered_bytes: Vec<u8> = data.iter()
@@ -65,6 +68,9 @@ fn main() -> Result <(), Box<dyn std::error::Error>> {
                     // Doing something with b, currently nothing
                     Some(b)
                 } else {
+                    // Saving non ASCII byte
+                    non_ascii_bytes.push(b);
+
                     // Pushing to the end of the vector, i is the ordinal offset 
                     non_ascii_offsets.push(i);
 
@@ -74,18 +80,26 @@ fn main() -> Result <(), Box<dyn std::error::Error>> {
             })
             .collect();
 
-        println!("Removed {} non-ASCII bytes", non_ascii_offsets.len());
-        println!("Offsets of removed bytes: {:?}", non_ascii_offsets);
+        // Check if non-ASCII characters
+        if non_ascii_offsets.len() > 0 {
+            let filtered_sha256: String = sha256_hash(&filtered_bytes);
 
-        // In case there was filtering we will get different hash
-        let filtered_sha256: String = sha256_hash(&filtered_bytes);
-        if filtered_sha256 != original_sha256 {
-            // Modifying the file if needed
-            write(argv[1].clone(), &filtered_bytes)?;
+            println!("Containment found: Total Characters Filtered: {}\nnon-ASCII Entropy: {}\nnon-ASCII sha256: {}",
+               non_ascii_bytes.len(),
+               shannon_entropy(&non_ascii_bytes),
+               filtered_sha256,
+            );
+
+            // Verify again before committing
+            if filtered_sha256 != original_sha256 {
+                    write(argv[1].clone(), &filtered_bytes)?;
+            }
+        // Clean 
+        } else {
+            println!("File is clean  no non-ASCII characters detected.");
+
         }
 
-        println!("original sha256: {}\noriginal shannon: {}\ndestination sha256: {}\ndestination shannon: {}",
-            original_sha256, shannon_entropy(&data), filtered_sha256, shannon_entropy(&filtered_bytes));
     }
 
     Ok(())
