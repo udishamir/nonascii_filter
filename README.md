@@ -80,6 +80,6 @@ Remove any non-ASCII bytes.
 
 Overwrite the file only if changes were made.
 
- Notes
+ Notes:
 Ensure the binary is executable:
 ``` chmod +x ~/.vim/bin/remove_water ```
