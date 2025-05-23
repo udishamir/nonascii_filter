@@ -32,72 +32,77 @@ fn sha256_hash(bytes: &[u8]) -> String {
     sha256_hash
 }
 
-fn main() -> Result <(), Box<dyn std::error::Error>> {
+struct NonAsciiScan {
+    filtered: Vec<u8>,
+    non_ascii_positions: Vec<(usize, usize)>, // (line, column)
+    non_ascii_bytes: Vec<u8>,
+}
 
-    // user args
+fn scan_non_ascii(data: &[u8]) -> NonAsciiScan {
+    let mut filtered = Vec::with_capacity(data.len());
+    let mut non_ascii_positions = Vec::new();
+    let mut non_ascii_bytes = Vec::new();
+
+    let mut line = 1;
+    let mut col = 1;
+
+    for &b in data {
+        if b == b'\n' {
+            line += 1;
+            col = 1;
+        }
+
+        if b.is_ascii() {
+            filtered.push(b);
+        } else {
+            non_ascii_positions.push((line, col));
+            non_ascii_bytes.push(b);
+        }
+
+        if b != b'\n' {
+            col += 1;
+        }
+    }
+
+    NonAsciiScan {
+        filtered,
+        non_ascii_positions,
+        non_ascii_bytes,
+    }
+}
+
+fn main() -> Result <(), Box<dyn std::error::Error>> {
     let argv: Vec<String> = env::args().collect();
     if argv.len() != 2 {
         println!("Please supply source code file to filter: {} <source code full path>", argv[0]);
         std::process::exit(0);
     }
 
-    println!("\nScanning for non-ASCII characters ...");
+    let data = read(argv[1].clone())?;
 
-    let fstat: bool = std::fs::exists(argv[1].clone()).expect("file not found");
-    if !fstat {
-        println!("Error, cannot access the file, make sure it exist!");
-        std::process::exit(-1);
-    } else {
-        // Attempting to read the file as array of u8
-        let data: Vec<u8> = read(argv[1].clone())?;
+    // Hash before sending to scan_non_ascii
+    let original_sha256 = sha256_hash(&data);
 
-        // Calculating the original file sha256 before filtering
-        let original_sha256 = sha256_hash(&data);
+    let result = scan_non_ascii(&data);
 
-        // I want to track non ASCII bytes offset
-        let mut non_ascii_offsets = Vec::new();
+    let filtered_sha256 = sha256_hash(&result.filtered);
 
-        // Store non ASCII bytes
-        let mut non_ascii_bytes: Vec<u8> = Vec::new(); 
+    if !result.non_ascii_positions.is_empty() {
+        println!("Containment found: Total Characters Filtered: {}\nnon-ASCII Entropy: {}\nnon-ASCII sha256: {}",
+            result.non_ascii_bytes.len(),
+            shannon_entropy(&result.non_ascii_bytes),
+            filtered_sha256,
+        );
 
-        // Filtering non ASCII characters 
-        let filtered_bytes: Vec<u8> = data.iter()
-            .enumerate()
-            .filter_map(|(i, &b)| {
-                if b.is_ascii() {
-                    // Doing something with b, currently nothing
-                    Some(b)
-                } else {
-                    // Saving non ASCII byte
-                    non_ascii_bytes.push(b);
-
-                    // Pushing to the end of the vector, i is the ordinal offset 
-                    non_ascii_offsets.push(i);
-
-                    // filter_map expect to return value
-                    None
-                }
-            })
-            .collect();
-
-        // Check if non-ASCII characters
-        if non_ascii_offsets.len() > 0 {
-            let filtered_sha256: String = sha256_hash(&filtered_bytes);
-
-            println!("Containment found: Total Characters Filtered: {}\nnon-ASCII Entropy: {}\nnon-ASCII sha256: {}",
-               non_ascii_bytes.len(),
-               shannon_entropy(&non_ascii_bytes),
-               filtered_sha256,
-            );
-
-            // Verify again before committing
-            if filtered_sha256 != original_sha256 {
-                    write(argv[1].clone(), &filtered_bytes)?;
-            }
-        // Clean 
-        } else {
-            println!("File is clean no non-ASCII characters detected.");
+        for (line, col) in result.non_ascii_positions.iter() {
+            println!("{line} {col}");
         }
+
+        if filtered_sha256 != original_sha256 {
+            write(argv[1].clone(), &result.filtered)?;
+        }
+    } else {
+        println!("File is clean. No non-ASCII characters detected.");
     }
 
     Ok(())

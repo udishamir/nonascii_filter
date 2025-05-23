@@ -25,16 +25,53 @@ mkdir -p ~/.vim/bin
 cp ./target/release/remove_water ~/.vim/bin/
 
 4.  Vim Integration
-Add the following to your ~/.vimrc to run the filter automatically on every file save:
+An example vimrc file
 
-** Run non-ASCII character filter on file save **
-augroup RunRemoveWaterOnSave
-    autocmd!
-    autocmd BufWritePost * silent! execute '!~/.vim/bin/remove_water ' . shellescape(@%, 1)
-augroup END
 ```
- Example
-When saving any file, remove_water will:
+set spell
+set spelllang=en_us
+
+filetype plugin indent on
+
+" Running non ascii charcters filter
+command! -bar Filter call HighlightNonASCIIChars()
+command! -bar FilterQ call HighlightNonASCIIChars() | quit
+
+" High lighting non-ASCII
+highlight NonASCII ctermbg=red guibg=red
+
+function! HighlightNonASCIIChars()
+  " Save the current file
+  silent write
+
+  " Run filter non-ASCII characters
+  let l:lines = split(system('~/.vim/bin/remove_water ' . shellescape(@%, 1)), '\n')
+
+  " Reload the file from disk in case the filter found non-ASCII characters
+  silent! edit
+
+  " Remove previous highlight
+  if exists("g:nonascii_match_id")
+    silent! call matchdelete(g:nonascii_match_id)
+  endif
+
+  " Parse output positions and highlight
+  let l:positions = []
+  for l in l:lines
+    if l =~ '^\d\+ \d\+$'
+      let [lnum, col] = split(l)
+      call add(l:positions, [str2nr(lnum), str2nr(col)])
+    endif
+  endfor
+
+  if !empty(l:positions)
+    let g:nonascii_match_id = matchaddpos('NonASCII', l:positions, 10, 9999)
+  endif
+endfunction
+
+```
+Example
+To trigger the filter ```:Filter``` to trigger the filter and quit ```:FilterQ```
 
 Calculate the files SHA-256 hash before and after filtering.
 
