@@ -98,7 +98,6 @@ fn main() -> Result <(), Box<dyn std::error::Error>> {
         } else {
             println!("File is clean no non-ASCII characters detected.");
         }
-
     }
 
     Ok(())
