@@ -6,23 +6,23 @@ A lightweight Rust utility to **automatically remove non-ASCII characters** from
 
 This tool scans files and removes any byte outside the standard ASCII range (`0x00``0x7F`). It is intended to be integrated with Vim via an `autocmd` so that files are cleaned automatically on save.
 
----
-
 ##  Installation
 
 1. **Clone this repository**:
-
-```sh
+```
 git clone https://github.com/yourusername/nonascii_filter.git
 cd nonascii_filter
+```
 
 2. Build the release binary 
-cargo build --release
+```cargo build --release```
 
 3. Copy the compiled executable
 
+```
 mkdir -p ~/.vim/bin
 cp ./target/release/remove_water ~/.vim/bin/
+```
 
 4.  Vim Integration
 An example vimrc file
@@ -70,6 +70,7 @@ function! HighlightNonASCIIChars()
 endfunction
 
 ```
+
 Example
 To trigger the filter ```:Filter``` to trigger the filter and quit ```:FilterQ```
 
@@ -81,4 +82,4 @@ Overwrite the file only if changes were made.
 
  Notes
 Ensure the binary is executable:
-chmod +x ~/.vim/bin/remove_water
+``` chmod +x ~/.vim/bin/remove_water ```
