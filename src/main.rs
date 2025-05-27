@@ -1,41 +1,35 @@
 /*
-    MIT License
+   MIT License
 
-    Copyright (c) 2025 [Ehud (Udi) Shamir]
+   Copyright (c) 2025 [Ehud (Udi) Shamir]
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights to
-    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-    the Software, and to permit persons to whom the Software is furnished to do so,
-    subject to the following conditions:
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights to
+   use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+   the Software, and to permit persons to whom the Software is furnished to do so,
+   subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-    INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-    PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
-    FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-    OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-    OTHER DEALINGS IN THE SOFTWARE.
- */
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+   PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+   FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+   OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+   OTHER DEALINGS IN THE SOFTWARE.
+*/
 
-use std::fs::{read, write};
-use std::env;
-use sha256::digest;
 use entropy::shannon_entropy;
-
-fn sha256_hash(bytes: &[u8]) -> String {
-    let sha256_hash = digest(bytes);
-
-    sha256_hash
-}
+use sha256::digest;
+use std::env;
+use std::fs::{read, write};
 
 struct NonAsciiScan {
     filtered: Vec<u8>,
     non_ascii_positions: Vec<(usize, usize)>, // (line, column)
-    non_ascii_bytes: Vec<u8>
+    non_ascii_bytes: Vec<u8>,
 }
 
 fn scan_non_ascii(data: &[u8]) -> NonAsciiScan {
@@ -79,10 +73,13 @@ fn scan_non_ascii(data: &[u8]) -> NonAsciiScan {
     }
 }
 
-fn main() -> Result <(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let argv: Vec<String> = env::args().collect();
     if argv.len() != 2 {
-        println!("Please supply source code file to filter: {} <source code full path>", argv[0]);
+        println!(
+            "Please supply source code file to filter: {} <source code full path>",
+            argv[0]
+        );
         std::process::exit(0);
     }
 
@@ -96,15 +93,17 @@ fn main() -> Result <(), Box<dyn std::error::Error>> {
         The rational behind hashing the original data and the filtered data is to check if the file was modified
         as well to provide data for further analysis / features along the line.
     */
-    let original_sha256 = sha256_hash(&data);
+    let original_sha256 = digest(&data);
 
     // Returns NonAsciiScan struct
     let result = scan_non_ascii(&data);
 
-    let filtered_sha256 = sha256_hash(&result.filtered);
+    // Getting sha256 from the filtered data
+    let filtered_sha256 = digest(&result.filtered);
 
     if !result.non_ascii_positions.is_empty() {
-        println!("Containment found: Total Characters Filtered: {}\nnon-ASCII Entropy: {}\nnon-ASCII sha256: {}",
+        println!(
+            "Containment found: Total Characters Filtered: {}\nnon-ASCII Entropy: {}\nnon-ASCII sha256: {}",
             result.non_ascii_bytes.len(),
             shannon_entropy(&result.non_ascii_bytes),
             filtered_sha256,
@@ -119,6 +118,7 @@ fn main() -> Result <(), Box<dyn std::error::Error>> {
         if filtered_sha256 != original_sha256 {
             write(argv[1].clone(), &result.filtered)?;
         }
+    // No non-ASCII characters found
     } else {
         println!("File is clean. No non-ASCII characters detected.");
     }
