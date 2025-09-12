@@ -5,6 +5,7 @@ A lightweight Rust utility to **automatically remove non-ASCII characters** from
 ##  What It Does
 
 This tool scans files and removes any byte outside the standard ASCII range (`0x00``0x7F`). It is intended to be integrated with Vim via an `autocmd` so that files are cleaned automatically on save.
+It supports recursive scanning.
 
 ##  Installation
 
