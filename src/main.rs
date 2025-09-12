@@ -22,7 +22,7 @@
 */
 
 fn usage(prog: String) {
-    println!("Usage: {} <source code full path>", prog);
+    println!("Usage: {} <source code full path / directory>", prog);
 }
 
 use entropy::shannon_entropy;
