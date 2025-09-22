@@ -75,11 +75,8 @@ fn scan_non_ascii(data: &[u8]) -> NonAsciiScan {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let argv: Vec<String> = env::args().collect();
-    if argv.len() != 2 {
-        println!(
-            "Please supply source code file to filter: {} <source code full path>",
-            argv[0]
-        );
+    if argv.len() != 2{
+        println!("** Non ASCII filter by Ehud (Udi) Shamir 2025\nusage: {} source file **", argv[0]);
         std::process::exit(0);
     }
 
