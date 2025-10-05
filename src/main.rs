@@ -25,99 +25,111 @@ use entropy::shannon_entropy;
 use sha256::digest;
 use std::env;
 use std::fs::{read, write};
+use std::str;
+
+// Watermarks to detect and remove
+static CODE_WATERMARKS: &[&str] = &["///", "//!"];
 
 struct NonAsciiScan {
     filtered: Vec<u8>,
-    non_ascii_positions: Vec<(usize, usize)>, // (line, column)
+    non_ascii_positions: Vec<(usize, usize)>,
     non_ascii_bytes: Vec<u8>,
+    watermark_positions: Vec<(usize, usize, String)>,
 }
 
-fn scan_non_ascii(data: &[u8]) -> NonAsciiScan {
+fn scan_and_filter(data: &[u8]) -> NonAsciiScan {
     let mut filtered = Vec::with_capacity(data.len());
     let mut non_ascii_positions = Vec::new();
     let mut non_ascii_bytes = Vec::new();
+    let mut watermark_positions = Vec::new();
 
-    let mut line = 1;
-    let mut col = 1;
+    let text = String::from_utf8_lossy(data);
+    for (line_no, line) in text.lines().enumerate() {
+        let mut col = 1;
+        let mut skip = false;
 
-    /*
-        Data is reference to slice of bytes and we are not copying it
-        so we are referencing data directly
-    */
-    for &b in data {
-        if b == b'\n' {
-            // We reached end of line, increment line and reset column
-            line += 1;
-            col = 1;
+        // Should be rule files to include water marks to detect and remove
+        for &wm in CODE_WATERMARKS {
+            if let Some(idx) = line.find(wm) {
+                watermark_positions.push((line_no + 1, idx + 1, wm.to_string()));
+                // Mark this line as a watermark line to skip
+                skip = true;
+                break;
+            }
         }
 
-        if b.is_ascii() {
-            filtered.push(b);
-        } else {
-            // Save non-ASCII position and byte
-            non_ascii_positions.push((line, col));
-            non_ascii_bytes.push(b);
+        if skip {
+            filtered.push(b'\n');
+            continue;
         }
 
-        // We are not in the end of line, increment column
-        if b != b'\n' {
+        for b in line.bytes() {
+            if b.is_ascii() {
+                filtered.push(b);
+            } else {
+                non_ascii_positions.push((line_no + 1, col));
+                non_ascii_bytes.push(b);
+            }
             col += 1;
         }
+
+        filtered.push(b'\n');
     }
 
-    // Update struct with the filtered data and the non-ASCII positions and bytes
     NonAsciiScan {
         filtered,
         non_ascii_positions,
         non_ascii_bytes,
+        watermark_positions,
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let argv: Vec<String> = env::args().collect();
-    if argv.len() != 2{
-        println!("** Non ASCII filter by Ehud (Udi) Shamir 2025\nusage: {} source file **", argv[0]);
+    if argv.len() != 2 {
+        println!(
+            "** Non-ASCII + Watermark Filter by Ehud (Udi) Shamir 2025 **\nusage: {} <source file>",
+            argv[0]
+        );
         std::process::exit(0);
     }
 
-    /*
-        Reading all file into memory at once, this "good enough" for small files
-        however for large files, ill need to read it in fixed chunks, usually 4k so it will be aligned with memory page size
-    */
-    let data = read(argv[1].clone())?;
-
-    /*
-        The rational behind hashing the original data and the filtered data is to check if the file was modified
-        as well to provide data for further analysis / features along the line.
-    */
+    let path = &argv[1];
+    let data = read(path)?;
     let original_sha256 = digest(&data);
 
-    // Returns NonAsciiScan struct
-    let result = scan_non_ascii(&data);
-
-    // Getting sha256 from the filtered data
+    let result = scan_and_filter(&data);
     let filtered_sha256 = digest(&result.filtered);
 
-    if !result.non_ascii_positions.is_empty() {
+    if !result.non_ascii_positions.is_empty() || !result.watermark_positions.is_empty() {
         println!(
-            "Containment found: Total Characters Filtered: {}\nnon-ASCII Entropy: {}\nnon-ASCII sha256: {}",
+            "Filtered {} non-ASCII characters, {} watermarks removed\nEntropy: {:.4}\nFiltered SHA256: {}",
             result.non_ascii_bytes.len(),
+            result.watermark_positions.len(),
             shannon_entropy(&result.non_ascii_bytes),
-            filtered_sha256,
+            filtered_sha256
         );
 
-        // Printing both column and line number for VIM
-        for (line, col) in result.non_ascii_positions.iter() {
-            println!("{line} {col}");
+        if !result.non_ascii_positions.is_empty() {
+            println!("\nNon-ASCII positions:");
+            for (line, col) in &result.non_ascii_positions {
+                println!("  line {line}, col {col}");
+            }
         }
 
-        // Additional sanity before writing to file
-        if filtered_sha256 != original_sha256 {
-            write(argv[1].clone(), &result.filtered)?;
+        if !result.watermark_positions.is_empty() {
+            println!("\nRemoved watermarks:");
+            for (line, col, mark) in &result.watermark_positions {
+                println!("  line {line}, col {col}: {}", mark);
+            }
         }
-    // No non-ASCII characters found
+
+        if filtered_sha256 != original_sha256 {
+            write(path, &result.filtered)?;
+            println!("\nFile updated successfully.");
+        }
     } else {
-        println!("File is clean. No non-ASCII characters detected.");
+        println!("File is clean. No non-ASCII or watermark patterns detected.");
     }
 
     Ok(())
