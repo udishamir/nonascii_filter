@@ -72,7 +72,6 @@ fn scan_and_filter(data: &[u8]) -> NonAsciiScan {
         }
 
         if skip {
-            filtered.push(b'\n');
             continue;
         }
 
